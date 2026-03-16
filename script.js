@@ -21,6 +21,7 @@ const btnExportToggle = document.getElementById('btn-export-toggle');
 const exportDropdown = document.getElementById('export-dropdown');
 const exportPng = document.getElementById('export-png');
 const exportPdf = document.getElementById('export-pdf');
+const exportEmail = document.getElementById('export-email');
 const btnAi = document.getElementById('btn-ai');
 
 // Settings Elements
@@ -111,6 +112,7 @@ function init() {
 
     exportPng.addEventListener('click', () => handleExport('png'));
     exportPdf.addEventListener('click', () => handleExport('pdf'));
+    exportEmail.addEventListener('click', () => handleExport('email'));
 
     // Settings
     btnSettings.addEventListener('click', toggleSettingsPanel);
@@ -642,6 +644,33 @@ function handleExport(format) {
 
                 pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
                 pdf.save(`${safeName}_Planner.pdf`);
+            } else if (format === 'email') {
+                // Convert canvas to blob for Web Share API
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `${safeName}_Board.png`, { type: 'image/png' });
+                    
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: `${appState.projectName} Photoshoot Plan`,
+                                text: 'Here is the photoshoot plan we created!'
+                            });
+                        } catch (error) {
+                            console.log('Error sharing or share cancelled by user:', error);
+                        }
+                    } else {
+                        alert('Your browser does not fully support direct file attachments via the share menu. We will download the image for you instead, and you can attach it to your email manually.');
+                        // Fallback to standard download
+                        const link = document.createElement('a');
+                        link.download = `${safeName}_Board.png`;
+                        link.href = imgData;
+                        link.click();
+                        
+                        // Optional: attempt to open mail client (without attachment, just subject)
+                        window.location.href = `mailto:?subject=${encodeURIComponent(appState.projectName + ' Photoshoot Plan')}&body=${encodeURIComponent('Please find the attached photoshoot plan.')}`;
+                    }
+                }, 'image/png');
             }
 
             btnExportToggle.innerHTML = '<span class="material-icons-round">ios_share</span>Export';
